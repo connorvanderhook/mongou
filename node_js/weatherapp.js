@@ -1,43 +1,31 @@
-var MongoClient = require('mongodb').MongoClient;
-
-MongoClient.connect('mongodb://127.0.0.1:27017/test', function(err, db) {
-    if(err) throw err;
-
-
-    var things = db.collection('things');
-
-    var query = {'State' : 1, 'Temperature': 1, '_id' : 0 };
-    // 'title' : { '$regex' : 'Microsoft' }
-    var projection = { 'State' : 1, 'Temperature': 1, '_id' : 0 };
-
-    var cursor = things.find(query);
-    // query
-    // cursor.skip(0);
-    cursor.limit(10000);
-    cursor.sort([['State', 1], ['Temperature', -1]])
-
+var client = require('mongodb').MongoClient;
+ 
+client.connect('mongodb://127.0.0.1:27017/weather', function(err, db) {
+    if (err) throw err;
+ 
+    var query = {};
+    var projection = {'State':1, 'Temperature':1};
+ 
+    var cursor = db.collection('data').find(query, projection);
+ 
+    // Sort by state and then by temperature (decreasing)
+    cursor.sort([['State',1], ['Temperature',-1]]);
+ 
+    var state = ''; // initialize to dummy value
+    var operator = {'$set':{'month_high':true}};
+ 
     cursor.each(function(err, doc) {
-        if(err) throw err;
-        if(doc == null) {
+        if (err) throw err;
+ 
+        if (doc == null) {
             return db.close();
+        } else if (doc.State !== state) {
+            // first record for each state is the high temp one
+            state = doc.State;
+ 
+            db.collection('data').update({'_id':doc._id}, operator, function(err, updated) {
+                if (err) throw err;
+            });
         }
-        // while cursor.hasNext(){
-        //     console.dir(doc);
-        // }
-        console.dir(doc);
     });
-
-    // var query = { 'media.oembed.type' : 'video' };
-
-    // var projection = { 'media.oembed.url' : 1, '_id' : 0 };
-
-    // db.collection('things').find(query, projection).each(function(err, doc) {
-    //     if(err) throw err;
-
-    //     if(doc == null) {
-    //         return db.close();
-    //     }
-
-    //     console.dir(doc);
-    // });
 });
